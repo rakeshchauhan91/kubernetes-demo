@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kubernetes Explained — Deployment, Service, Ingress</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; line-height: 1.7; }
+  
+  .hero { background: linear-gradient(135deg, #1e3a5f 0%, #0f2540 100%); padding: 48px 40px; text-align: center; border-bottom: 2px solid #2d4a6b; }
+  .hero h1 { font-size: 2.2rem; color: #60a5fa; margin-bottom: 8px; }
+  .hero p { color: #94a3b8; font-size: 1.05rem; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+  
+  h2 { font-size: 1.5rem; color: #60a5fa; margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 2px solid #1e3a5f; display: flex; align-items: center; gap: 10px; }
+  h3 { font-size: 1.1rem; color: #93c5fd; margin: 24px 0 10px; }
+  p { color: #cbd5e1; margin-bottom: 12px; }
+
+  /* Code blocks */
+  .code-block { background: #1a1f2e; border: 1px solid #2d3748; border-radius: 10px; margin: 16px 0; overflow: hidden; }
+  .code-header { background: #252d3d; padding: 8px 16px; font-size: 0.75rem; color: #64748b; font-family: monospace; border-bottom: 1px solid #2d3748; display: flex; justify-content: space-between; align-items: center; }
+  .code-header span.filename { color: #60a5fa; }
+  pre { padding: 20px; font-family: 'Cascadia Code', 'Courier New', monospace; font-size: 0.82rem; line-height: 1.8; overflow-x: auto; }
+  
+  .comment { color: #6a9955; }
+  .key { color: #9cdcfe; }
+  .value { color: #ce9178; }
+  .number { color: #b5cea8; }
+  .keyword { color: #c586c0; }
+  .highlight-line { background: #2d3f5a; display: block; margin: 0 -20px; padding: 0 20px; border-left: 3px solid #60a5fa; }
+
+  /* Info cards */
+  .card { border-radius: 12px; padding: 20px 24px; margin: 16px 0; border-left: 4px solid; }
+  .card.blue { background: #1a2d4a; border-color: #3b82f6; }
+  .card.green { background: #1a2e1a; border-color: #22c55e; }
+  .card.yellow { background: #2a2510; border-color: #f59e0b; }
+  .card.red { background: #2a1a1a; border-color: #ef4444; }
+  .card.purple { background: #1e1a2e; border-color: #a855f7; }
+  .card-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; }
+  .card.blue .card-title { color: #60a5fa; }
+  .card.green .card-title { color: #4ade80; }
+  .card.yellow .card-title { color: #fbbf24; }
+  .card.red .card-title { color: #f87171; }
+  .card.purple .card-title { color: #c084fc; }
+
+  /* Service types table */
+  .svc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 20px 0; }
+  .svc-card { border-radius: 12px; padding: 20px; border: 2px solid; transition: transform 0.2s; }
+  .svc-card:hover { transform: translateY(-2px); }
+  .svc-card.clusterip { background: #1a1f35; border-color: #3b82f6; }
+  .svc-card.nodeport  { background: #1a2a1a; border-color: #22c55e; }
+  .svc-card.loadbal   { background: #2a1e10; border-color: #f59e0b; }
+  .svc-card.extname   { background: #1e1a2e; border-color: #a855f7; }
+  .svc-card h4 { font-size: 1rem; margin-bottom: 6px; }
+  .svc-card.clusterip h4 { color: #60a5fa; }
+  .svc-card.nodeport  h4 { color: #4ade80; }
+  .svc-card.loadbal   h4 { color: #fbbf24; }
+  .svc-card.extname   h4 { color: #c084fc; }
+  .svc-card .badge { display: inline-block; font-size: 0.7rem; padding: 2px 8px; border-radius: 20px; margin-bottom: 10px; font-weight: 600; }
+  .svc-card.clusterip .badge { background: #1e3a7a; color: #93c5fd; }
+  .svc-card.nodeport  .badge { background: #14532d; color: #86efac; }
+  .svc-card.loadbal   .badge { background: #78350f; color: #fde68a; }
+  .svc-card.extname   .badge { background: #3b0764; color: #e9d5ff; }
+  .svc-card p { color: #94a3b8; font-size: 0.88rem; margin: 0; }
+  .svc-card .use-case { margin-top: 10px; font-size: 0.8rem; color: #64748b; }
+  .svc-card .use-case strong { color: #94a3b8; }
+
+  /* Flow diagram */
+  .flow { display: flex; align-items: center; gap: 0; margin: 24px 0; flex-wrap: wrap; }
+  .flow-box { background: #1a2d4a; border: 2px solid #3b82f6; border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 110px; }
+  .flow-box.green { background: #1a2e1a; border-color: #22c55e; }
+  .flow-box.orange { background: #2a1e10; border-color: #f59e0b; }
+  .flow-box.purple { background: #1e1a2e; border-color: #a855f7; }
+  .flow-box.gray { background: #1e2430; border-color: #475569; }
+  .flow-box .label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+  .flow-box .name { font-size: 0.9rem; font-weight: 700; color: #e2e8f0; }
+  .flow-arrow { font-size: 1.5rem; color: #475569; padding: 0 4px; }
+  .flow-arrow.annotated { display: flex; flex-direction: column; align-items: center; }
+  .flow-arrow.annotated span { font-size: 0.65rem; color: #64748b; }
+
+  /* Annotation callouts */
+  .annotation { display: flex; gap: 14px; margin: 10px 0; align-items: flex-start; }
+  .annotation .num { background: #3b82f6; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .annotation .text { color: #cbd5e1; font-size: 0.9rem; }
+  .annotation .text strong { color: #93c5fd; }
+
+  /* Namespace explanation */
+  .ns-diagram { border: 2px dashed #475569; border-radius: 12px; padding: 20px; margin: 16px 0; }
+  .ns-diagram .ns-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .ns-inner { display: flex; gap: 12px; flex-wrap: wrap; }
+  .ns-resource { background: #1a2d4a; border: 1px solid #3b82f6; border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; color: #93c5fd; }
+
+  .divider { height: 1px; background: #1e3a5f; margin: 48px 0; }
+
+  /* Nginx section */
+  .nginx-flow { background: #1a1f2e; border-radius: 12px; padding: 24px; margin: 16px 0; }
+
+  @media (max-width: 600px) {
+    .svc-grid { grid-template-columns: 1fr; }
+    .flow { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>☸️ Kubernetes Explained</h1>
+  <p>deployment.yaml · service.yaml · ingress.yaml · ClusterIP · Nginx · Namespaces</p>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- DEPLOYMENT -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <h2>📦 1. deployment.yaml — Line by Line</h2>
+
+  <p>A Deployment answers one question: <strong style="color:#60a5fa">"Keep N copies of my container running, always."</strong> It watches your Pods and restarts them if they crash.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">deployment.yaml</span><span>annotated</span></div>
+    <pre><span class="comment"># ── What KIND of resource this is ──────────────────────────</span>
+<span class="key">apiVersion</span>: <span class="value">apps/v1</span>          <span class="comment"># Deployment lives in the "apps" API group</span>
+<span class="key">kind</span>: <span class="value">Deployment</span>
+
+<span class="key">metadata</span>:
+  <span class="key">name</span>: <span class="value">myapi</span>               <span class="comment"># Name you use in kubectl commands</span>
+  <span class="key">namespace</span>: <span class="value">default</span>        <span class="comment"># Which virtual cluster to live in</span>
+  <span class="key">labels</span>:
+    <span class="key">app</span>: <span class="value">myapi</span>              <span class="comment"># Label on the Deployment itself (for grouping)</span>
+
+<span class="key">spec</span>:
+  <span class="highlight-line"><span class="key">  replicas</span>: <span class="number">2</span>               <span class="comment"># ① Run exactly 2 Pods. If one crashes, k8s starts another.</span></span>
+
+  <span class="key">  selector</span>:
+    <span class="key">matchLabels</span>:
+      <span class="highlight-line"><span class="key">    app</span>: <span class="value">myapi</span>           <span class="comment"># ② "I manage Pods that have label app=myapi"</span></span>
+
+  <span class="key">  template</span>:               <span class="comment"># ③ Blueprint for every Pod this Deployment creates</span>
+    <span class="key">metadata</span>:
+      <span class="key">labels</span>:
+        <span class="highlight-line"><span class="key">      app</span>: <span class="value">myapi</span>        <span class="comment"># ④ MUST match selector.matchLabels above!</span></span>
+    <span class="key">spec</span>:
+      <span class="key">containers</span>:
+      - <span class="key">name</span>: <span class="value">myapi</span>
+        <span class="highlight-line"><span class="key">  image</span>: <span class="value">myapi:latest</span>  <span class="comment"># ⑤ Docker image to run</span></span>
+        <span class="highlight-line"><span class="key">  imagePullPolicy</span>: <span class="value">Never</span> <span class="comment"># ⑥ Use local image, don't go to Docker Hub</span></span>
+        <span class="key">  ports</span>:
+        - <span class="key">containerPort</span>: <span class="number">8080</span>  <span class="comment"># ⑦ Port your .NET app listens on INSIDE container</span>
+        <span class="key">  env</span>:
+        - <span class="key">name</span>: <span class="value">ASPNETCORE_ENVIRONMENT</span>
+          <span class="key">value</span>: <span class="value">Production</span>
+        <span class="key">  envFrom</span>:
+        - <span class="key">configMapRef</span>:
+            <span class="key">name</span>: <span class="value">myapi-config</span>    <span class="comment"># ⑧ Inject all ConfigMap keys as env vars</span>
+        - <span class="key">secretRef</span>:
+            <span class="key">name</span>: <span class="value">myapi-secret</span>    <span class="comment"># ⑨ Inject all Secret keys as env vars</span>
+        <span class="key">  resources</span>:
+          <span class="key">requests</span>:
+            <span class="key">memory</span>: <span class="value">"128Mi"</span>      <span class="comment"># ⑩ Minimum guaranteed memory</span>
+            <span class="key">cpu</span>: <span class="value">"250m"</span>          <span class="comment">    250 millicores = 0.25 CPU core</span>
+          <span class="key">limits</span>:
+            <span class="key">memory</span>: <span class="value">"256Mi"</span>      <span class="comment"># ⑪ Hard max — container killed if exceeded</span>
+            <span class="key">cpu</span>: <span class="value">"500m"</span>
+        <span class="key">  livenessProbe</span>:         <span class="comment"># ⑫ k8s restarts Pod if this fails</span>
+          <span class="key">httpGet</span>:
+            <span class="key">path</span>: <span class="value">/health</span>
+            <span class="key">port</span>: <span class="number">8080</span>
+        <span class="key">  readinessProbe</span>:        <span class="comment"># ⑬ k8s stops sending traffic if this fails</span>
+          <span class="key">httpGet</span>:
+            <span class="key">path</span>: <span class="value">/health</span>
+            <span class="key">port</span>: <span class="number">8080</span></pre>
+  </div>
+
+  <div class="annotation"><div class="num">①</div><div class="text"><strong>replicas: 2</strong> — Kubernetes always maintains exactly 2 running Pods. Kill one manually and it immediately starts a replacement.</div></div>
+  <div class="annotation"><div class="num">②④</div><div class="text"><strong>selector.matchLabels must match template.labels</strong> — This is how the Deployment finds "its" Pods. They must be identical or the Deployment can't manage the Pods.</div></div>
+  <div class="annotation"><div class="num">⑥</div><div class="text"><strong>imagePullPolicy: Never</strong> — Critical for local development. Without this, Kubernetes tries to pull from Docker Hub and fails because "myapi:latest" doesn't exist there.</div></div>
+  <div class="annotation"><div class="num">⑫⑬</div><div class="text"><strong>liveness vs readiness</strong> — Liveness = "is the app alive?" (restart if no). Readiness = "is the app ready for traffic?" (remove from load balancer if no, but don't restart).</div></div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- SERVICE TYPES -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <h2>🔌 2. Service Types — All 4 Explained</h2>
+
+  <p>A Service gives your Pods a <strong style="color:#60a5fa">stable IP address and DNS name</strong>. Pods are temporary and get new IPs when restarted — the Service IP never changes. Think of it as a permanent front-door to your ever-changing Pods.</p>
+
+  <div class="svc-grid">
+    <div class="svc-card clusterip">
+      <h4>ClusterIP</h4>
+      <div class="badge">DEFAULT</div>
+      <p>Creates a virtual IP that only exists <strong>inside the cluster</strong>. No outside access at all.</p>
+      <p class="use-case"><strong>Use when:</strong> Microservice A needs to talk to Microservice B internally. Your API talking to a Redis cache, for example.</p>
+    </div>
+    <div class="svc-card nodeport">
+      <h4>NodePort</h4>
+      <div class="badge">DEV / TESTING</div>
+      <p>Opens a port on the Node (your machine) in range <strong>30000–32767</strong>. Accessible from your Windows browser.</p>
+      <p class="use-case"><strong>Use when:</strong> Quick local testing without Ingress. Access via <code style="color:#86efac">http://localhost:30080</code></p>
+    </div>
+    <div class="svc-card loadbal">
+      <h4>LoadBalancer</h4>
+      <div class="badge">PRODUCTION / DOCKER DESKTOP</div>
+      <p>On real cloud (AWS/GCP/Azure) it provisions an external Load Balancer. On <strong>Docker Desktop it maps to localhost</strong>.</p>
+      <p class="use-case"><strong>Use when:</strong> You want <code style="color:#fde68a">http://localhost:80</code> to reach your app directly. Simple local testing with clean URLs.</p>
+    </div>
+    <div class="svc-card extname">
+      <h4>ExternalName</h4>
+      <div class="badge">EXTERNAL DNS ALIAS</div>
+      <p>No proxying — just a <strong>DNS CNAME alias</strong> to an external hostname. Traffic goes directly to that host.</p>
+      <p class="use-case"><strong>Use when:</strong> You want Pods to reference an external service (like your SQL Server) via a Kubernetes DNS name.</p>
+    </div>
+  </div>
+
+  <h3>🤔 Why LoadBalancer in our service.yaml?</h3>
+  <p>Because on Docker Desktop, <strong>LoadBalancer automatically gets EXTERNAL-IP = localhost</strong>. This means you can hit <code style="color:#fbbf24">http://localhost:80</code> directly from your browser with zero extra setup. It's the most convenient type for local full-stack testing.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">service.yaml</span></div>
+    <pre><span class="key">apiVersion</span>: <span class="value">v1</span>
+<span class="key">kind</span>: <span class="value">Service</span>
+<span class="key">metadata</span>:
+  <span class="key">name</span>: <span class="value">myapi-service</span>
+  <span class="comment"># No namespace here — defaults to "default" namespace automatically</span>
+<span class="key">spec</span>:
+  <span class="key">selector</span>:
+    <span class="key">app</span>: <span class="value">myapi</span>        <span class="comment"># Find Pods with label app=myapi</span>
+  <span class="key">ports</span>:
+  - <span class="key">port</span>: <span class="number">80</span>           <span class="comment"># Port YOU call from outside (browser/curl)</span>
+    <span class="key">targetPort</span>: <span class="number">8080</span>  <span class="comment"># Port the container actually listens on (.NET default)</span>
+  <span class="highlight-line"><span class="key">  type</span>: <span class="value">LoadBalancer</span>  <span class="comment"># On Docker Desktop → EXTERNAL-IP becomes localhost</span></span></pre>
+  </div>
+
+  <div class="card yellow">
+    <div class="card-title">⚡ port vs targetPort</div>
+    <p><strong>port: 80</strong> = what the Service exposes (what you call)<br>
+    <strong>targetPort: 8080</strong> = what the container listens on (what .NET runs on)<br>
+    The Service translates 80 → 8080 automatically. This is why you can call <code>localhost:80</code> even though .NET runs on 8080.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- CLUSTERIP -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <h2>🔵 3. What is ClusterIP?</h2>
+
+  <p>ClusterIP is the <strong>default</strong> service type. When you create any Service without specifying a type, you get ClusterIP.</p>
+
+  <div class="card blue">
+    <div class="card-title">ClusterIP in simple words</div>
+    <p>It's a <strong>virtual IP address that only exists inside the Kubernetes cluster network</strong>. No traffic from your Windows machine can reach it directly. Only other Pods inside the cluster can use it.</p>
+  </div>
+
+  <h3>Visual — ClusterIP vs LoadBalancer</h3>
+
+  <div class="nginx-flow">
+    <p style="color:#64748b; font-size:0.8rem; margin-bottom:16px;">CLUSTERIP — internal only</p>
+    <div class="flow">
+      <div class="flow-box gray"><div class="label">Your PC</div><div class="name">Windows</div></div>
+      <div class="flow-arrow">❌</div>
+      <div class="flow-box"><div class="label">ClusterIP Service</div><div class="name">10.96.0.1</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green"><div class="label">Pod</div><div class="name">myapi</div></div>
+    </div>
+    <p style="color:#64748b; font-size:0.8rem; margin: 20px 0 12px;">LOADBALANCER — accessible from Windows</p>
+    <div class="flow">
+      <div class="flow-box gray"><div class="label">Your PC</div><div class="name">localhost:80</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box orange"><div class="label">LoadBalancer Service</div><div class="name">:80 → :8080</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green"><div class="label">Pod</div><div class="name">myapi</div></div>
+    </div>
+  </div>
+
+  <h3>When would you use ClusterIP then?</h3>
+  <p>When you have multiple services talking to each other <strong>inside</strong> the cluster. For example:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Example: Frontend API calls Backend API internally</span></div>
+    <pre><span class="comment"># backend-service.yaml — ClusterIP, not exposed outside</span>
+<span class="key">kind</span>: <span class="value">Service</span>
+<span class="key">metadata</span>:
+  <span class="key">name</span>: <span class="value">backend-api</span>
+<span class="key">spec</span>:
+  <span class="key">type</span>: <span class="value">ClusterIP</span>    <span class="comment"># Only reachable inside cluster</span>
+  <span class="key">selector</span>:
+    <span class="key">app</span>: <span class="value">backend</span>
+  <span class="key">ports</span>:
+  - <span class="key">port</span>: <span class="number">80</span>
+    <span class="key">targetPort</span>: <span class="number">8080</span>
+
+<span class="comment"># From the frontend Pod, call it via DNS:</span>
+<span class="comment"># http://backend-api.default.svc.cluster.local</span>
+<span class="comment"># or simply: http://backend-api  (if same namespace)</span></pre>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- NAMESPACE -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <h2>🗂️ 4. Why No Namespace in service.yaml?</h2>
+
+  <p>When you omit <code style="color:#93c5fd">namespace</code> in any Kubernetes resource, it automatically goes into the <strong style="color:#60a5fa">"default" namespace</strong>. That's it.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">These two are identical</span></div>
+    <pre><span class="comment"># Explicit namespace</span>          <span class="comment"># Implicit namespace (same result)</span>
+<span class="key">metadata</span>:                       <span class="key">metadata</span>:
+  <span class="key">name</span>: <span class="value">myapi-service</span>            <span class="key">  name</span>: <span class="value">myapi-service</span>
+  <span class="key">namespace</span>: <span class="value">default</span>             <span class="comment">  # no namespace = default</span></pre>
+  </div>
+
+  <h3>What are Namespaces for?</h3>
+  <p>Namespaces are <strong>virtual clusters inside your cluster</strong>. Think of them like separate folders that isolate resources.</p>
+
+  <div class="ns-diagram">
+    <div class="ns-label">Cluster</div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+      <div style="border: 1px dashed #3b82f6; border-radius:8px; padding:12px; flex:1; min-width:180px;">
+        <div style="font-size:0.7rem;color:#60a5fa;margin-bottom:8px;">NAMESPACE: default</div>
+        <div class="ns-inner">
+          <div class="ns-resource">myapi Pod</div>
+          <div class="ns-resource">myapi Service</div>
+        </div>
+      </div>
+      <div style="border: 1px dashed #22c55e; border-radius:8px; padding:12px; flex:1; min-width:180px;">
+        <div style="font-size:0.7rem;color:#4ade80;margin-bottom:8px;">NAMESPACE: staging</div>
+        <div class="ns-inner">
+          <div class="ns-resource" style="border-color:#22c55e;color:#4ade80;">myapi Pod</div>
+          <div class="ns-resource" style="border-color:#22c55e;color:#4ade80;">myapi Service</div>
+        </div>
+      </div>
+      <div style="border: 1px dashed #f59e0b; border-radius:8px; padding:12px; flex:1; min-width:180px;">
+        <div style="font-size:0.7rem;color:#fbbf24;margin-bottom:8px;">NAMESPACE: kube-system</div>
+        <div class="ns-inner">
+          <div class="ns-resource" style="border-color:#f59e0b;color:#fbbf24;">CoreDNS</div>
+          <div class="ns-resource" style="border-color:#f59e0b;color:#fbbf24;">kube-proxy</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p>For local dev with a single app, <strong>default namespace is perfectly fine</strong>. You'd use separate namespaces when you have multiple environments or teams sharing one cluster.</p>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- INGRESS -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <h2>🚦 5. Ingress — What it does and why</h2>
+
+  <p>Ingress is a <strong>smart HTTP router</strong> that sits in front of all your Services. Instead of exposing every Service on a different port, Ingress routes traffic based on <strong>hostname and URL path</strong>.</p>
+
+  <div class="card blue">
+    <div class="card-title">The problem Ingress solves</div>
+    <p>Without Ingress: every app needs its own LoadBalancer or NodePort → messy ports everywhere (localhost:8080, localhost:8081, localhost:8082...)<br><br>
+    With Ingress: one entry point, clean URLs — <code>api.local/products</code>, <code>api.local/health</code>, <code>admin.local/dashboard</code></p>
+  </div>
+
+  <h3>Full Traffic Flow with Ingress</h3>
+  <div class="nginx-flow">
+    <div class="flow" style="justify-content:center;">
+      <div class="flow-box gray"><div class="label">Browser / curl</div><div class="name">api.local</div></div>
+      <div class="flow-arrow annotated">→<span>HTTP :80</span></div>
+      <div class="flow-box purple"><div class="label">Ingress Controller</div><div class="name">nginx Pod</div></div>
+      <div class="flow-arrow annotated">→<span>reads rules</span></div>
+      <div class="flow-box orange"><div class="label">Ingress Resource</div><div class="name">routing rules</div></div>
+      <div class="flow-arrow annotated">→<span>routes to</span></div>
+      <div class="flow-box"><div class="label">Service</div><div class="name">myapi-svc</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green"><div class="label">Pod</div><div class="name">myapi</div></div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">ingress.yaml — annotated</span></div>
+    <pre><span class="key">apiVersion</span>: <span class="value">networking.k8s.io/v1</span>
+<span class="key">kind</span>: <span class="value">Ingress</span>
+<span class="key">metadata</span>:
+  <span class="key">name</span>: <span class="value">myapi-ingress</span>
+  <span class="key">annotations</span>:
+    <span class="highlight-line"><span class="key">    nginx.ingress.kubernetes.io/rewrite-target</span>: <span class="value">/</span>  <span class="comment"># ① Strip path prefix before forwarding</span></span>
+<span class="key">spec</span>:
+  <span class="highlight-line"><span class="key">  ingressClassName</span>: <span class="value">nginx</span>   <span class="comment"># ② "Use the nginx Ingress Controller"</span></span>
+  <span class="key">  rules</span>:
+  - <span class="key">host</span>: <span class="value">api.local</span>           <span class="comment"># ③ Match requests with this Host header</span>
+    <span class="key">http</span>:
+      <span class="key">paths</span>:
+      - <span class="key">path</span>: <span class="value">/</span>               <span class="comment"># ④ Match ALL paths under api.local</span>
+        <span class="key">pathType</span>: <span class="value">Prefix</span>
+        <span class="key">backend</span>:
+          <span class="key">service</span>:
+            <span class="highlight-line"><span class="key">              name</span>: <span class="value">myapi-service</span>   <span class="comment"># ⑤ Forward to this Service</span></span>
+            <span class="key">port</span>:
+              <span class="key">number</span>: <span class="number">80</span>
+
+  <span class="comment"># You can add MORE hosts/paths to the same Ingress:</span>
+  - <span class="key">host</span>: <span class="value">admin.local</span>
+    <span class="key">http</span>:
+      <span class="key">paths</span>:
+      - <span class="key">path</span>: <span class="value">/</span>
+        <span class="key">pathType</span>: <span class="value">Prefix</span>
+        <span class="key">backend</span>:
+          <span class="key">service</span>:
+            <span class="key">name</span>: <span class="value">admin-service</span>
+            <span class="key">port</span>:
+              <span class="key">number</span>: <span class="number">80</span></pre>
+  </div>
+
+  <div class="annotation"><div class="num">①</div><div class="text"><strong>rewrite-target: /</strong> — If a request comes in as <code>/api/products</code> and you want to forward it as <code>/products</code> to the backend, rewrite strips the prefix.</div></div>
+  <div class="annotation"><div class="num">②</div><div class="text"><strong>ingressClassName: nginx</strong> — Tells Kubernetes "use the nginx controller to handle this Ingress." There could be multiple controllers (nginx, traefik, istio) and this picks which one.</div></div>
+  <div class="annotation"><div class="num">③</div><div class="text"><strong>host: api.local</strong> — Only matches requests where the HTTP Host header equals "api.local". You add this to your Windows hosts file: <code>127.0.0.1 api.local</code></div></div>
+  <div class="annotation"><div class="num">⑤</div><div class="text"><strong>backend.service.name</strong> — Must match the <code>metadata.name</code> of your Service exactly. This is how Ingress connects to Service.</div></div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- NGINX -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <h2>⚙️ 6. Where Does Nginx Fit In?</h2>
+
+  <p>There are <strong>two separate things</strong> here. People get confused because both involve nginx:</p>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin: 20px 0;">
+    <div class="card red">
+      <div class="card-title">❌ NOT what we're using</div>
+      <p><strong>nginx as a web server</strong> — serving HTML files, acting as a reverse proxy for your own app. This is the traditional nginx you might know.</p>
+    </div>
+    <div class="card green">
+      <div class="card-title">✅ What we ARE using</div>
+      <p><strong>NGINX Ingress Controller</strong> — a Pod running inside Kubernetes that watches your Ingress resources and dynamically configures nginx routing rules.</p>
+    </div>
+  </div>
+
+  <h3>What the NGINX Ingress Controller actually is</h3>
+  <p>When you ran this command earlier:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">Install NGINX Ingress Controller</span></div>
+    <pre>kubectl apply -f https://...ingress-nginx.../deploy.yaml
+
+<span class="comment"># This created several things in the ingress-nginx namespace:</span>
+kubectl get all -n ingress-nginx
+
+<span class="comment"># NAME                                       READY</span>
+<span class="comment"># pod/ingress-nginx-controller-xxx           1/1    ← This is nginx running as a Pod</span>
+<span class="comment"># service/ingress-nginx-controller           LoadBalancer  ← Exposed on localhost:80</span>
+<span class="comment"># deployment.apps/ingress-nginx-controller   1/1</span></pre>
+  </div>
+
+  <p>The controller Pod runs nginx internally and <strong>watches the Kubernetes API for Ingress resources</strong>. Every time you create or update an Ingress resource, the controller automatically updates nginx's routing config.</p>
+
+  <div class="nginx-flow">
+    <p style="color:#94a3b8; margin-bottom:20px; font-weight:600;">Complete picture — where nginx sits</p>
+    <div class="flow" style="justify-content:center; flex-wrap:wrap; gap:8px;">
+      <div class="flow-box gray">
+        <div class="label">Windows Browser</div>
+        <div class="name">http://api.local</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box gray">
+        <div class="label">hosts file</div>
+        <div class="name">127.0.0.1</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box purple">
+        <div class="label">nginx Pod :80</div>
+        <div class="name">Ingress Controller</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box orange">
+        <div class="label">Reads your</div>
+        <div class="name">ingress.yaml rules</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">
+        <div class="label">ClusterIP Service</div>
+        <div class="name">myapi-service</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green">
+        <div class="label">Your .NET Pod</div>
+        <div class="name">:8080</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card purple">
+    <div class="card-title">💡 Key insight</div>
+    <p>When you use Ingress, your Service type should be <strong>ClusterIP</strong> (not LoadBalancer), because the Ingress Controller is the only thing that needs to reach your Service — and it's already inside the cluster. The Ingress Controller itself has the LoadBalancer service that gets <code>localhost</code>.</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">service.yaml — correct type when using Ingress</span></div>
+    <pre><span class="key">spec</span>:
+  <span class="key">type</span>: <span class="value">ClusterIP</span>   <span class="comment"># ← Change to ClusterIP when using Ingress</span>
+                   <span class="comment">#   The Ingress Controller handles external access</span>
+                   <span class="comment">#   No need for LoadBalancer on each individual service</span></pre>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Summary -->
+  <h2>📋 Summary — How Everything Connects</h2>
+
+  <div class="code-block">
+    <div class="code-header"><span class="filename">The full chain</span></div>
+    <pre><span class="comment">Browser: http://api.local/products</span>
+       ↓
+<span class="comment">Windows hosts file → 127.0.0.1</span>
+       ↓
+<span class="comment">NGINX Ingress Controller Pod (port 80)</span>  <span class="comment">← nginx lives HERE</span>
+       ↓ reads ingress.yaml rules
+<span class="comment">Ingress resource: host=api.local → myapi-service:80</span>
+       ↓
+<span class="comment">Service (ClusterIP): port 80 → targetPort 8080</span>
+       ↓
+<span class="comment">.NET Core API Pod: listening on :8080</span>
+       ↓
+<span class="comment">SQL Server: host.docker.internal:1433 (your Windows machine)</span></pre>
+  </div>
+
+  <div style="text-align:center; padding: 40px 0 20px; color: #475569; font-size: 0.9rem;">
+    Built for learning Kubernetes on Docker Desktop · Windows 11 Home
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-api-clusterip
+spec:
+  selector:
+    app: my-api        # Routes to Pods with this label
+  ports:
+  - protocol: TCP
+    port: 8080           # Port the Service exposes
+    targetPort: 8080     # Port the container listens on
+  type: ClusterIP

@@ -1,0 +1,34 @@
+.git
+
+# Ignore local dependencies (Node.js example)
+node_modules
+
+# Ignore Python cache files
+__pycache__
+*.pyc
+
+# Ignore all log files
+*.log
+logs/
+
+# Ignore sensitive environment files
+.env
+
+# Ignore markdown files except the main README.md
+*.md
+!README.md
+
+#docker files
+DockerFile
+docker*
+.docker*
+K8*/
+
+#build
+bin/
+obj/
+logs/
+
+# Ignore IDE/editor-specific files
+.vscode
+.idea
